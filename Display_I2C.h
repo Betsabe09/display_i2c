@@ -1,74 +1,50 @@
+#ifndef DISPLAY_I2C_H
+#define DISPLAY_I2C_H
+
 #include "mbed.h"
-#include "Display_I2C.h"
 
-// Definiciones privadas
-#define DISPLAY_IR_CLEAR_DISPLAY   0b00000001
-#define DISPLAY_IR_ENTRY_MODE_SET  0b00000100
-#define DISPLAY_IR_DISPLAY_CONTROL 0b00001000
-#define DISPLAY_IR_FUNCTION_SET    0b00100000
-#define DISPLAY_IR_SET_DDRAM_ADDR  0b10000000
+// Direcci贸n del PCF8574T para Arduino ID 0x27 para mbed 0x4E
+#define LCD_ADDR 0x4E
 
-#define DISPLAY_IR_ENTRY_MODE_SET_INCREMENT 0b00000010
-#define DISPLAY_IR_ENTRY_MODE_SET_NO_SHIFT  0b00000000
+class Display_I2C {
+public:
+    // Constructor que inicializa el I2C y establece la direcci贸n del LCD
+    Display_I2C(PinName sda, PinName scl, uint8_t addr = LCD_ADDR);
+    
+    // Inicializa el LCD con la configuraci贸n b谩sica
+    void initialize();
+    
+    // Imprime una cadena de texto en el LCD
+    void print(const char* str);
+    
+    // Limpia el contenido del LCD
+    void clear();
+    
+    // Establece la posici贸n del cursor en el LCD
+    void setCursor(uint8_t col, uint8_t row);
+    
+    // Establece el estado del backlight (encendido o apagado)
+    void setBacklight(bool state);
 
-#define DISPLAY_IR_DISPLAY_CONTROL_DISPLAY_ON  0b00000100
-#define DISPLAY_IR_DISPLAY_CONTROL_DISPLAY_OFF 0b00000000
-#define DISPLAY_IR_DISPLAY_CONTROL_CURSOR_OFF  0b00000000
+private:
+    I2C _i2c;        // Objeto I2C para comunicaci贸n
+    uint8_t _addr;   // Direcci贸n del LCD
+    uint8_t _backlight; // Estado del backlight
+    
+    // Env铆a un byte de datos al LCD
+    void send(uint8_t data, bool mode);
+    
+    // Env铆a un comando al LCD
+    void command(uint8_t cmd);
+    
+    // Env铆a un byte de datos al LCD como texto
+    void write(uint8_t data);
+    
+    // Funci贸n para esperar un tiempo espec铆fico en milisegundos
+    void delayMs(int ms);
+    
+    // Env铆a un nibble de 4 bits al LCD (parte de la comunicaci贸n de 8 bits)
+    void sendNibble(uint8_t nibble);
+};
 
-#define DISPLAY_IR_FUNCTION_SET_4BITS    0b00000000
-#define DISPLAY_IR_FUNCTION_SET_2LINES   0b00001000
-#define DISPLAY_IR_FUNCTION_SET_5x8DOTS  0b00000000
-
-#define DISPLAY_PIN_RS  0
-#define DISPLAY_PIN_EN  1
-#define DISPLAY_PIN_D4  2
-#define DISPLAY_PIN_D5  3
-#define DISPLAY_PIN_D6  4
-#define DISPLAY_PIN_D7  5
-
-#define PCF8574_I2C_ADDRESS 0x27
-
-// Declaraci髇 de objetos globales
-I2C i2c(PB_9, PB_8);  // SDA, SCL
-static display_t display;
-static bool initialized = false;
-
-// Funci髇 para escribir un comando en el display
-static void displayWriteCommand(uint8_t command) {
-    uint8_t data = command;
-    i2c.write(PCF8574_I2C_ADDRESS, (const char*)&data, 1);
-}
-
-// Funci髇 para escribir datos en el display
-static void displayWriteData(uint8_t data) {
-    uint8_t cmd = 0x01 | data;  // Ejemplo de forma de enviar datos
-    i2c.write(PCF8574_I2C_ADDRESS, (const char*)&cmd, 1);
-}
-
-// Inicializaci髇 del display
-void displayInit(displayConnection_t connection) {
-    display.connection = connection;
-    i2c.frequency(100000); // Configura la frecuencia del I2C
-
-    // Configura el display en modo de 4 bits, 2 l韓eas
-    displayWriteCommand(DISPLAY_IR_FUNCTION_SET | DISPLAY_IR_FUNCTION_SET_4BITS | DISPLAY_IR_FUNCTION_SET_2LINES | DISPLAY_IR_FUNCTION_SET_5x8DOTS);
-    displayWriteCommand(DISPLAY_IR_DISPLAY_CONTROL | DISPLAY_IR_DISPLAY_CONTROL_DISPLAY_ON | DISPLAY_IR_DISPLAY_CONTROL_CURSOR_OFF);
-    displayWriteCommand(DISPLAY_IR_CLEAR_DISPLAY);
-    displayWriteCommand(DISPLAY_IR_ENTRY_MODE_SET | DISPLAY_IR_ENTRY_MODE_SET_INCREMENT | DISPLAY_IR_ENTRY_MODE_SET_NO_SHIFT);
-
-    initialized = true;
-}
-
-// Establece la posici髇 del cursor en el display
-void displayCharPositionWrite(uint8_t charPositionX, uint8_t charPositionY) {
-    uint8_t address = 0x80 | (charPositionY * 0x40 + charPositionX);
-    displayWriteCommand(address);
-}
-
-// Escribe una cadena de caracteres en el display
-void displayStringWrite(const char *str) {
-    while (*str) {
-        displayWriteData(*str++);
-    }
-}
-
+#endif // DISPLAY_I2C_H
